@@ -96,9 +96,40 @@
         #follower-kitten.walking .paws {
             opacity: 1;
         }
+
+        #swimming-fish {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            font-size: 2rem;
+            transition: none;
+        }
+
+        #swimming-fish .fish-body {
+            display: inline-block;
+            transform-origin: center center;
+        }
+
+        #swimming-fish .bubbles {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.5em;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #swimming-fish.scared .bubbles {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <div id="swimming-fish">
+        <span class="bubbles">💨</span>
+        <span class="fish-body">🐟</span>
+    </div>
     <div id="follower-kitten">
         <span class="body">🐱</span>
         <span class="paws">🐾</span>
@@ -115,35 +146,99 @@
     <footer>&copy; 2026 Cute Kitten Landing Page</footer>
 
     <script>
+        // Fish setup
+        const fish = document.getElementById('swimming-fish');
+        const fishBody = fish.querySelector('.fish-body');
+        let fishX = Math.random() * window.innerWidth;
+        let fishY = Math.random() * window.innerHeight * 0.5 + 50;
+        let fishVX = (Math.random() - 0.5) * 3;
+        let fishVY = (Math.random() - 0.5) * 2;
+        let fishWanderTimer = 0;
+        let fishSwimPhase = 0;
+
+        // Kitten setup
         const kitten = document.getElementById('follower-kitten');
         const body = kitten.querySelector('.body');
         let kittenX = window.innerWidth / 2;
         let kittenY = window.innerHeight / 2;
-        let mouseX = kittenX;
-        let mouseY = kittenY;
         let isMoving = false;
         let bobPhase = 0;
 
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-
         function animate() {
-            const dx = mouseX - kittenX;
-            const dy = mouseY - kittenY;
+            // --- Fish AI: wander around, flee from kitten ---
+            const dxFK = kittenX - fishX;
+            const dyFK = kittenY - fishY;
+            const distToKitten = Math.sqrt(dxFK * dxFK + dyFK * dyFK);
+
+            // Fish gets scared when kitten is close
+            const scared = distToKitten < 180;
+            fish.classList.toggle('scared', scared);
+
+            if (scared) {
+                // Flee away from kitten
+                const fleeSpeed = 4.5;
+                fishVX += (-dxFK / distToKitten) * fleeSpeed * 0.15;
+                fishVY += (-dyFK / distToKitten) * fleeSpeed * 0.15;
+            } else {
+                // Gentle wandering
+                fishWanderTimer--;
+                if (fishWanderTimer <= 0) {
+                    fishVX += (Math.random() - 0.5) * 1.5;
+                    fishVY += (Math.random() - 0.5) * 1.0;
+                    fishWanderTimer = 40 + Math.random() * 80;
+                }
+            }
+
+            // Dampen velocity
+            fishVX *= 0.96;
+            fishVY *= 0.96;
+
+            // Clamp speed
+            const fishSpeed = Math.sqrt(fishVX * fishVX + fishVY * fishVY);
+            const maxSpeed = scared ? 6 : 2.5;
+            if (fishSpeed > maxSpeed) {
+                fishVX = (fishVX / fishSpeed) * maxSpeed;
+                fishVY = (fishVY / fishSpeed) * maxSpeed;
+            }
+
+            fishX += fishVX;
+            fishY += fishVY;
+
+            // Bounce off edges
+            const margin = 40;
+            if (fishX < margin) { fishX = margin; fishVX = Math.abs(fishVX); }
+            if (fishX > window.innerWidth - margin) { fishX = window.innerWidth - margin; fishVX = -Math.abs(fishVX); }
+            if (fishY < margin) { fishY = margin; fishVY = Math.abs(fishVY); }
+            if (fishY > window.innerHeight - margin) { fishY = window.innerHeight - margin; fishVY = -Math.abs(fishVY); }
+
+            // Fish swimming wobble
+            fishSwimPhase += 0.1;
+            const swimBob = Math.sin(fishSwimPhase) * 3;
+
+            // Flip fish to face movement direction
+            if (Math.abs(fishVX) > 0.3) {
+                fishBody.style.transform = fishVX < 0 ? 'scaleX(1)' : 'scaleX(-1)';
+            }
+
+            // Scale fish when scared
+            const fishScale = scared ? 1.15 : 1;
+            fish.style.left = (fishX - 16) + 'px';
+            fish.style.top = (fishY - 16 + swimBob) + 'px';
+            fish.style.transform = `scale(${fishScale})`;
+
+            // --- Kitten chases the fish ---
+            const dx = fishX - kittenX;
+            const dy = fishY - kittenY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Smooth follow with easing
-            const speed = 0.08;
+            const speed = 0.06;
             kittenX += dx * speed;
             kittenY += dy * speed;
 
-            // Determine if moving
-            isMoving = dist > 10;
+            isMoving = dist > 15;
             kitten.classList.toggle('walking', isMoving);
 
-            // Flip kitten to face cursor direction
+            // Flip kitten to face fish
             if (Math.abs(dx) > 2) {
                 body.style.transform = dx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
             }
@@ -155,7 +250,6 @@
                 bobOffset = Math.sin(bobPhase) * 4;
             }
 
-            // Scale based on "excitement" (proximity to cursor)
             const scale = isMoving ? 1 + Math.min(dist / 800, 0.3) : 1;
 
             kitten.style.left = (kittenX - 20) + 'px';
