@@ -68,9 +68,41 @@
             color: #999;
             font-size: 0.85rem;
         }
+
+        #follower-kitten {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            font-size: 2.5rem;
+            transition: none;
+        }
+
+        #follower-kitten .body {
+            display: inline-block;
+            transform-origin: center bottom;
+        }
+
+        #follower-kitten .paws {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6em;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        #follower-kitten.walking .paws {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <div id="follower-kitten">
+        <span class="body">🐱</span>
+        <span class="paws">🐾</span>
+    </div>
     <h1>Welcome!</h1>
     <p>Here's an adorable kitten to brighten your day</p>
     <div class="kitten-card">
@@ -78,5 +110,59 @@
         <div class="caption">This little furball says hello! 🐱</div>
     </div>
     <footer>&copy; 2026 Cute Kitten Landing Page</footer>
+
+    <script>
+        const kitten = document.getElementById('follower-kitten');
+        const body = kitten.querySelector('.body');
+        let kittenX = window.innerWidth / 2;
+        let kittenY = window.innerHeight / 2;
+        let mouseX = kittenX;
+        let mouseY = kittenY;
+        let isMoving = false;
+        let bobPhase = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animate() {
+            const dx = mouseX - kittenX;
+            const dy = mouseY - kittenY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Smooth follow with easing
+            const speed = 0.08;
+            kittenX += dx * speed;
+            kittenY += dy * speed;
+
+            // Determine if moving
+            isMoving = dist > 10;
+            kitten.classList.toggle('walking', isMoving);
+
+            // Flip kitten to face cursor direction
+            if (Math.abs(dx) > 2) {
+                body.style.transform = dx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+            }
+
+            // Bobbing animation when moving
+            let bobOffset = 0;
+            if (isMoving) {
+                bobPhase += 0.15;
+                bobOffset = Math.sin(bobPhase) * 4;
+            }
+
+            // Scale based on "excitement" (proximity to cursor)
+            const scale = isMoving ? 1 + Math.min(dist / 800, 0.3) : 1;
+
+            kitten.style.left = (kittenX - 20) + 'px';
+            kitten.style.top = (kittenY - 30 + bobOffset) + 'px';
+            kitten.style.transform = `scale(${scale})`;
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
 </body>
 </html>
