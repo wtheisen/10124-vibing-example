@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cute Kitten</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fce4ec, #f3e5f5, #e8eaf6);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #ad1457;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #6a1b9a;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .kitten-card {
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            max-width: 600px;
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .kitten-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .kitten-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .kitten-card .caption {
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        footer {
+            margin-top: 2rem;
+            color: #999;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome!</h1>
+    <p>Here's an adorable kitten to brighten your day</p>
+    <div class="kitten-card">
+        <img src="https://placekitten.com/600/400" alt="A cute kitten">
+        <div class="caption">This little furball says hello! 🐱</div>
+    </div>
+    <footer>&copy; 2026 Cute Kitten Landing Page</footer>
+</body>
+</html>
