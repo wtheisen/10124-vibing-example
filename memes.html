@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitten Memes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8eaf6, #f3e5f5, #fce4ec);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        nav {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        nav a {
+            color: #ad1457;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        nav a:hover {
+            background: #ad1457;
+            color: white;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #ad1457;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #6a1b9a;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .meme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .meme-card {
+            background: white;
+            border-radius: 1.2rem;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .meme-card:hover {
+            transform: translateY(-6px) rotate(1deg);
+        }
+
+        .meme-card:nth-child(even):hover {
+            transform: translateY(-6px) rotate(-1deg);
+        }
+
+        .meme-img-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .meme-img-wrapper img {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .meme-top-text,
+        .meme-bottom-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-family: Impact, 'Arial Black', sans-serif;
+            font-size: 1.8rem;
+            color: white;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            padding: 0.5rem 1rem;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .meme-top-text {
+            top: 8px;
+        }
+
+        .meme-bottom-text {
+            bottom: 8px;
+        }
+
+        .meme-card .reaction {
+            padding: 1rem 1.2rem;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #777;
+        }
+
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Home</a>
+    </nav>
+
+    <h1>Kitten Memes</h1>
+    <p class="subtitle">The internet's finest feline comedy</p>
+
+    <div class="meme-grid">
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/400/300" alt="Kitten meme">
+                <div class="meme-top-text">When you hear</div>
+                <div class="meme-bottom-text">the treat bag open</div>
+            </div>
+            <div class="reaction">Every. Single. Time. 😹</div>
+        </div>
+
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/401/300" alt="Kitten meme">
+                <div class="meme-top-text">I sits</div>
+                <div class="meme-bottom-text">therefore I fits</div>
+            </div>
+            <div class="reaction">The law is the law 📦</div>
+        </div>
+
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/402/300" alt="Kitten meme">
+                <div class="meme-top-text">Boss: Why are you late?</div>
+                <div class="meme-bottom-text">My cat was sitting on me</div>
+            </div>
+            <div class="reaction">A perfectly valid excuse 🛌</div>
+        </div>
+
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/403/300" alt="Kitten meme">
+                <div class="meme-top-text">3 AM</div>
+                <div class="meme-bottom-text">Zoomies activated</div>
+            </div>
+            <div class="reaction">Sleep is overrated anyway 🌙</div>
+        </div>
+
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/404/300" alt="Kitten meme">
+                <div class="meme-top-text">Pushes glass</div>
+                <div class="meme-bottom-text">off the table</div>
+            </div>
+            <div class="reaction">Gravity research in progress 🔬</div>
+        </div>
+
+        <div class="meme-card">
+            <div class="meme-img-wrapper">
+                <img src="https://placekitten.com/405/300" alt="Kitten meme">
+                <div class="meme-top-text">$50 cat toy:</div>
+                <div class="meme-bottom-text">I prefer the box</div>
+            </div>
+            <div class="reaction">Money well spent 💸</div>
+        </div>
+    </div>
+
+    <footer>&copy; 2026 Kitten Memes Collection</footer>
+</body>
+</html>
