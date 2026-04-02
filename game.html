@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitten vs Mice - 3D Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #start-screen, #game-over-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(20, 10, 30, 0.92);
+            z-index: 20;
+            color: white;
+            text-align: center;
+        }
+
+        #game-over-screen { display: none; }
+
+        #start-screen h1, #game-over-screen h1 {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            color: #f8bbd0;
+        }
+
+        #start-screen p, #game-over-screen p {
+            font-size: 1.2rem;
+            color: #ce93d8;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn {
+            margin-top: 1.5rem;
+            padding: 0.8rem 2.5rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 3rem;
+            background: linear-gradient(135deg, #ad1457, #6a1b9a);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover { transform: scale(1.08); }
+
+        .controls {
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            color: #b39ddb;
+            line-height: 1.8;
+        }
+
+        nav {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25;
+        }
+
+        nav a {
+            color: #ad1457;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+
+        nav a:hover { background: white; }
+
+        #final-score { font-size: 4rem; color: #f8bbd0; }
+    </style>
+</head>
+<body>
+    <nav><a href="index.html">Home</a></nav>
+
+    <div id="hud">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="timer">60</span>s</div>
+        <div>Mice left: <span id="mice-count">0</span></div>
+    </div>
+
+    <div id="start-screen">
+        <h1>🐱 Kitten vs Mice 🐭</h1>
+        <p>Catch as many mice as you can in 60 seconds!</p>
+        <div class="controls">
+            <strong>WASD</strong> or <strong>Arrow Keys</strong> to move<br>
+            <strong>Space</strong> to pounce<br>
+            <strong>Shift</strong> to sprint
+        </div>
+        <button class="btn" id="start-btn">Play!</button>
+    </div>
+
+    <div id="game-over-screen">
+        <h1>Time's Up!</h1>
+        <p>You caught</p>
+        <div id="final-score">0</div>
+        <p>mice!</p>
+        <button class="btn" id="restart-btn">Play Again</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    (() => {
+        // ─── Scene Setup ───
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 40, 80);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xfff5e0, 1.0);
+        sun.position.set(20, 30, 10);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left = -40;
+        sun.shadow.camera.right = 40;
+        sun.shadow.camera.top = 40;
+        sun.shadow.camera.bottom = -40;
+        scene.add(sun);
+
+        // ─── Ground ───
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x7ec850 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Decorative patches
+        for (let i = 0; i < 30; i++) {
+            const patchGeo = new THREE.CircleGeometry(Math.random() * 3 + 1, 16);
+            const patchMat = new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(0.28, 0.5 + Math.random() * 0.3, 0.35 + Math.random() * 0.15) });
+            const patch = new THREE.Mesh(patchGeo, patchMat);
+            patch.rotation.x = -Math.PI / 2;
+            patch.position.set((Math.random() - 0.5) * 80, 0.01, (Math.random() - 0.5) * 80);
+            scene.add(patch);
+        }
+
+        // Fence
+        const fenceSize = 38;
+        const postMat = new THREE.MeshLambertMaterial({ color: 0x8d6e63 });
+        for (let side = 0; side < 4; side++) {
+            for (let i = -fenceSize; i <= fenceSize; i += 4) {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2, 0.3), postMat);
+                post.castShadow = true;
+                if (side < 2) {
+                    post.position.set(i, 1, (side === 0 ? -1 : 1) * fenceSize);
+                } else {
+                    post.position.set((side === 2 ? -1 : 1) * fenceSize, 1, i);
+                }
+                scene.add(post);
+            }
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(side < 2 ? fenceSize * 2 : 0.2, 0.2, side < 2 ? 0.2 : fenceSize * 2), postMat);
+            if (side < 2) rail.position.set(0, 1.5, (side === 0 ? -1 : 1) * fenceSize);
+            else rail.position.set((side === 2 ? -1 : 1) * fenceSize, 1.5, 0);
+            scene.add(rail);
+        }
+
+        // ─── Build Kitten ───
+        function createKitten() {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0xf4a460 });
+            const whiteMat = new THREE.MeshLambertMaterial({ color: 0xfff8f0 });
+            const darkMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            const pinkMat = new THREE.MeshLambertMaterial({ color: 0xffb6c1 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), bodyMat);
+            body.scale.set(1, 0.8, 1.3);
+            body.position.y = 1;
+            body.castShadow = true;
+            group.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 12), bodyMat);
+            head.position.set(0, 1.6, 1.1);
+            head.castShadow = true;
+            group.add(head);
+            group.userData.head = head;
+
+            // Ears
+            [-0.35, 0.35].forEach(x => {
+                const ear = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 4), bodyMat);
+                ear.position.set(x, 2.2, 1.0);
+                ear.rotation.z = x < 0 ? 0.2 : -0.2;
+                group.add(ear);
+                const inner = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.25, 4), pinkMat);
+                inner.position.set(x, 2.18, 1.05);
+                inner.rotation.z = x < 0 ? 0.2 : -0.2;
+                group.add(inner);
+            });
+
+            // Eyes
+            [-0.22, 0.22].forEach(x => {
+                const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), whiteMat);
+                eyeWhite.position.set(x, 1.7, 1.7);
+                group.add(eyeWhite);
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), darkMat);
+                pupil.position.set(x, 1.7, 1.82);
+                group.add(pupil);
+            });
+
+            // Nose
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), pinkMat);
+            nose.position.set(0, 1.55, 1.78);
+            group.add(nose);
+
+            // Legs
+            const legs = [];
+            [[-0.45, -1], [0.45, -1], [-0.45, 0.8], [0.45, 0.8]].forEach(([x, z]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.7, 8), bodyMat);
+                leg.position.set(x, 0.35, z);
+                leg.castShadow = true;
+                group.add(leg);
+                legs.push(leg);
+                // Paw
+                const paw = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), whiteMat);
+                paw.position.set(x, 0.05, z);
+                paw.scale.set(1, 0.5, 1.2);
+                group.add(paw);
+            });
+            group.userData.legs = legs;
+
+            // Tail
+            const tailCurve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, 1.2, -1.2),
+                new THREE.Vector3(0, 1.8, -1.8),
+                new THREE.Vector3(0.3, 2.3, -1.6),
+            ]);
+            const tail = new THREE.Mesh(
+                new THREE.TubeGeometry(tailCurve, 12, 0.08, 6, false),
+                bodyMat
+            );
+            group.add(tail);
+            group.userData.tail = tail;
+
+            return group;
+        }
+
+        // ─── Build Mouse ───
+        function createMouse() {
+            const group = new THREE.Group();
+            const grayMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+            const pinkMat = new THREE.MeshLambertMaterial({ color: 0xffaaaa });
+            const darkMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), grayMat);
+            body.scale.set(1, 0.8, 1.4);
+            body.position.y = 0.3;
+            body.castShadow = true;
+            group.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), grayMat);
+            head.position.set(0, 0.35, 0.45);
+            group.add(head);
+
+            // Snout
+            const snout = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), pinkMat);
+            snout.position.set(0, 0.3, 0.66);
+            group.add(snout);
+
+            // Ears
+            [-0.15, 0.15].forEach(x => {
+                const ear = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), pinkMat);
+                ear.position.set(x, 0.55, 0.35);
+                ear.scale.y = 0.5;
+                group.add(ear);
+            });
+
+            // Eyes
+            [-0.1, 0.1].forEach(x => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), darkMat);
+                eye.position.set(x, 0.4, 0.6);
+                group.add(eye);
+            });
+
+            // Tail
+            const tailCurve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, 0.25, -0.45),
+                new THREE.Vector3(0, 0.4, -0.9),
+                new THREE.Vector3(0.2, 0.5, -1.2),
+            ]);
+            const tail = new THREE.Mesh(
+                new THREE.TubeGeometry(tailCurve, 10, 0.03, 5, false),
+                pinkMat
+            );
+            group.add(tail);
+
+            return group;
+        }
+
+        // ─── Game State ───
+        const kitten = createKitten();
+        scene.add(kitten);
+
+        let mice = [];
+        let particles = [];
+        let score = 0;
+        let timeLeft = 60;
+        let gameRunning = false;
+        let timerInterval = null;
+
+        const keys = {};
+        const kittenVel = new THREE.Vector3();
+        const kittenDir = new THREE.Vector3(0, 0, 1);
+        let isPouncing = false;
+        let pounceTimer = 0;
+        let walkCycle = 0;
+
+        const KITTEN_SPEED = 12;
+        const SPRINT_MULT = 1.8;
+        const POUNCE_FORCE = 20;
+        const MOUSE_SPEED = 5;
+        const CATCH_DIST = 2.0;
+        const BOUNDARY = 36;
+
+        // ─── Spawn Mice ───
+        function spawnMouse() {
+            const mouse = createMouse();
+            mouse.position.set(
+                (Math.random() - 0.5) * BOUNDARY * 1.6,
+                0,
+                (Math.random() - 0.5) * BOUNDARY * 1.6
+            );
+            mouse.userData.vel = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                0,
+                (Math.random() - 0.5) * 2
+            ).normalize().multiplyScalar(MOUSE_SPEED);
+            mouse.userData.changeTimer = Math.random() * 2 + 1;
+            mouse.userData.scared = false;
+            scene.add(mouse);
+            mice.push(mouse);
+        }
+
+        function spawnParticles(pos) {
+            for (let i = 0; i < 12; i++) {
+                const geo = new THREE.SphereGeometry(0.1, 4, 4);
+                const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(Math.random() * 0.15 + 0.08, 1, 0.6) });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.copy(pos).add(new THREE.Vector3(0, 0.5, 0));
+                p.userData.vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 8,
+                    Math.random() * 8 + 3,
+                    (Math.random() - 0.5) * 8
+                );
+                p.userData.life = 1.0;
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        // ─── Input ───
+        window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ─── UI ───
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const miceCountEl = document.getElementById('mice-count');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreEl = document.getElementById('final-score');
+
+        document.getElementById('start-btn').onclick = startGame;
+        document.getElementById('restart-btn').onclick = startGame;
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            score = 0;
+            timeLeft = 60;
+            scoreEl.textContent = '0';
+            timerEl.textContent = '60';
+
+            // Clear old mice
+            mice.forEach(m => scene.remove(m));
+            mice = [];
+            particles.forEach(p => scene.remove(p));
+            particles = [];
+
+            kitten.position.set(0, 0, 0);
+            kittenVel.set(0, 0, 0);
+
+            // Spawn initial mice
+            for (let i = 0; i < 8; i++) spawnMouse();
+            miceCountEl.textContent = mice.length;
+
+            gameRunning = true;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                if (timeLeft <= 0) endGame();
+                // Spawn more mice over time
+                if (timeLeft % 8 === 0 && mice.length < 15) spawnMouse();
+                miceCountEl.textContent = mice.length;
+            }, 1000);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            finalScoreEl.textContent = score;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        // ─── Game Loop ───
+        const clock = new THREE.Clock();
+
+        function update() {
+            const dt = Math.min(clock.getDelta(), 0.05);
+            if (!gameRunning) return;
+
+            // ── Kitten Movement ──
+            const moveDir = new THREE.Vector3();
+            if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+            const sprinting = keys['ShiftLeft'] || keys['ShiftRight'];
+            const speed = KITTEN_SPEED * (sprinting ? SPRINT_MULT : 1);
+
+            if (moveDir.lengthSq() > 0) {
+                moveDir.normalize();
+                kittenVel.lerp(moveDir.multiplyScalar(speed), 0.15);
+                kittenDir.copy(kittenVel).normalize();
+
+                // Walking animation
+                walkCycle += dt * (sprinting ? 18 : 12);
+                const legs = kitten.userData.legs;
+                legs[0].position.y = 0.35 + Math.sin(walkCycle) * 0.15;
+                legs[1].position.y = 0.35 + Math.sin(walkCycle + Math.PI) * 0.15;
+                legs[2].position.y = 0.35 + Math.sin(walkCycle + Math.PI) * 0.15;
+                legs[3].position.y = 0.35 + Math.sin(walkCycle) * 0.15;
+            } else {
+                kittenVel.multiplyScalar(0.85);
+            }
+
+            // Pounce
+            if (keys['Space'] && !isPouncing) {
+                isPouncing = true;
+                pounceTimer = 0.4;
+                kittenVel.add(kittenDir.clone().multiplyScalar(POUNCE_FORCE));
+            }
+
+            if (isPouncing) {
+                pounceTimer -= dt;
+                kitten.position.y = Math.sin(pounceTimer / 0.4 * Math.PI) * 2;
+                if (pounceTimer <= 0) {
+                    isPouncing = false;
+                    kitten.position.y = 0;
+                }
+            }
+
+            kitten.position.x += kittenVel.x * dt;
+            kitten.position.z += kittenVel.z * dt;
+
+            // Boundary
+            kitten.position.x = Math.max(-BOUNDARY, Math.min(BOUNDARY, kitten.position.x));
+            kitten.position.z = Math.max(-BOUNDARY, Math.min(BOUNDARY, kitten.position.z));
+
+            // Face direction
+            if (kittenVel.lengthSq() > 0.5) {
+                const angle = Math.atan2(kittenVel.x, kittenVel.z);
+                kitten.rotation.y = angle;
+            }
+
+            // Tail wag
+            const tailTime = clock.elapsedTime;
+            kitten.userData.tail.rotation.y = Math.sin(tailTime * 5) * 0.3;
+
+            // ── Mouse AI ──
+            mice.forEach(mouse => {
+                const toKitten = new THREE.Vector3().subVectors(kitten.position, mouse.position);
+                const distToKitten = toKitten.length();
+
+                // Scare radius
+                if (distToKitten < 10) {
+                    mouse.userData.scared = true;
+                    const flee = toKitten.normalize().multiplyScalar(-1);
+                    mouse.userData.vel.lerp(flee.multiplyScalar(MOUSE_SPEED * 1.8), 0.1);
+                } else {
+                    mouse.userData.scared = false;
+                    mouse.userData.changeTimer -= dt;
+                    if (mouse.userData.changeTimer <= 0) {
+                        mouse.userData.changeTimer = Math.random() * 3 + 1;
+                        mouse.userData.vel.set(
+                            (Math.random() - 0.5) * 2,
+                            0,
+                            (Math.random() - 0.5) * 2
+                        ).normalize().multiplyScalar(MOUSE_SPEED);
+                    }
+                }
+
+                mouse.position.add(mouse.userData.vel.clone().multiplyScalar(dt));
+
+                // Bounce off boundaries
+                if (Math.abs(mouse.position.x) > BOUNDARY) {
+                    mouse.userData.vel.x *= -1;
+                    mouse.position.x = Math.sign(mouse.position.x) * BOUNDARY;
+                }
+                if (Math.abs(mouse.position.z) > BOUNDARY) {
+                    mouse.userData.vel.z *= -1;
+                    mouse.position.z = Math.sign(mouse.position.z) * BOUNDARY;
+                }
+
+                // Face movement direction
+                if (mouse.userData.vel.lengthSq() > 0.1) {
+                    mouse.rotation.y = Math.atan2(mouse.userData.vel.x, mouse.userData.vel.z);
+                }
+
+                // Scurry animation
+                mouse.position.y = Math.sin(clock.elapsedTime * 20) * 0.03;
+            });
+
+            // ── Catch Detection ──
+            for (let i = mice.length - 1; i >= 0; i--) {
+                const dist = kitten.position.distanceTo(mice[i].position);
+                if (dist < CATCH_DIST) {
+                    spawnParticles(mice[i].position);
+                    scene.remove(mice[i]);
+                    mice.splice(i, 1);
+                    score++;
+                    scoreEl.textContent = score;
+                    miceCountEl.textContent = mice.length;
+                    // Respawn a new mouse after a delay
+                    setTimeout(() => {
+                        if (gameRunning) {
+                            spawnMouse();
+                            miceCountEl.textContent = mice.length;
+                        }
+                    }, 2000);
+                }
+            }
+
+            // ── Particles ──
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.userData.vel.y -= 15 * dt;
+                p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+                p.userData.life -= dt * 2;
+                p.material.opacity = p.userData.life;
+                p.material.transparent = true;
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // ── Camera ──
+            const camTarget = new THREE.Vector3(
+                kitten.position.x,
+                kitten.position.y + 12,
+                kitten.position.z + 10
+            );
+            camera.position.lerp(camTarget, 0.05);
+            camera.lookAt(kitten.position.x, 0, kitten.position.z);
+        }
+
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+            update();
+            renderer.render(scene, camera);
+        }
+
+        gameLoop();
+    })();
+    </script>
+</body>
+</html>
